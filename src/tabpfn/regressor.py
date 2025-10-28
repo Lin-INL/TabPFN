@@ -70,6 +70,7 @@ from tabpfn.utils import (
     validate_X_predict,
     validate_Xy_fit,
 )
+from tabpfn._telemetry import configure_telemetry
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -210,6 +211,7 @@ class TabPFNRegressor(RegressorMixin, BaseEstimator):
         n_preprocessing_jobs: int = 1,
         inference_config: dict | ModelInterfaceConfig | None = None,
         differentiable_input: bool = False,
+        telemetry_enabled: bool | None = None,
     ) -> None:
         """A TabPFN interface for regression.
 
@@ -415,6 +417,12 @@ class TabPFNRegressor(RegressorMixin, BaseEstimator):
                 If true, preprocessing attempts to be end-to-end differentiable.
                 Less relevant for standard regression fine-tuning compared to
                 prompt-tuning.
+
+            telemetry_enabled:
+                Override the telemetry defaults. Set to ``False`` to disable all
+                telemetry (preventing any outbound requests), ``True`` to
+                force-enable telemetry, or ``None`` (default) to honour the
+                environment configuration.
         """
         super().__init__()
         self.n_estimators = n_estimators
@@ -434,6 +442,7 @@ class TabPFNRegressor(RegressorMixin, BaseEstimator):
         self.random_state = random_state
         self.inference_config = inference_config
         self.differentiable_input = differentiable_input
+        self.telemetry_enabled = configure_telemetry(telemetry_enabled)
 
         if n_jobs is not None:
             warnings.warn(
@@ -446,7 +455,8 @@ class TabPFNRegressor(RegressorMixin, BaseEstimator):
         self.n_preprocessing_jobs = n_preprocessing_jobs
 
         # Ping the usage service if telemetry enabled
-        ping()
+        if self.telemetry_enabled:
+            ping()
 
     @property
     def norm_bardist_(self) -> FullSupportBarDistribution:
