@@ -67,6 +67,7 @@ from tabpfn.utils import (
     validate_X_predict,
     validate_Xy_fit,
 )
+from tabpfn._telemetry import configure_telemetry
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -170,6 +171,7 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
         n_preprocessing_jobs: int = 1,
         inference_config: dict | ModelInterfaceConfig | None = None,
         differentiable_input: bool = False,
+        telemetry_enabled: bool | None = None,
     ) -> None:
         """A TabPFN interface for classification.
 
@@ -383,6 +385,12 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
                 differentiable with PyTorch.
                 This is useful for explainability and prompt-tuning, essential
                 in the prompttuning code.
+
+            telemetry_enabled:
+                Override the default telemetry behaviour. Set to ``False`` to
+                fully disable telemetry (and avoid any network calls), ``True``
+                to force-enable telemetry, or ``None`` (default) to respect the
+                environment configuration.
         """
         super().__init__()
         self.n_estimators = n_estimators
@@ -403,6 +411,7 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
         self.random_state = random_state
         self.inference_config = inference_config
         self.differentiable_input = differentiable_input
+        self.telemetry_enabled = configure_telemetry(telemetry_enabled)
 
         if n_jobs is not None:
             warnings.warn(
@@ -415,7 +424,8 @@ class TabPFNClassifier(ClassifierMixin, BaseEstimator):
         self.n_preprocessing_jobs = n_preprocessing_jobs
 
         # Ping the usage service if telemetry enabled
-        ping()
+        if self.telemetry_enabled:
+            ping()
 
     # TODO: We can remove this from scikit-learn lower bound of 1.6
     def _more_tags(self) -> dict[str, Any]:
